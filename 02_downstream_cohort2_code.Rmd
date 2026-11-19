@@ -1,0 +1,303 @@
+---
+title: "02 Downstream analysis: ACT vs observation by MRD status"
+output: html_document
+---
+
+
+Kaplan-Meier curves show no p-values or hazard ratios. Adjusted hazard ratios
+(ACT vs No ACT, reference = No ACT) come from the multivariable Cox models shown as forest plots.
+The landmark for each panel is the median time from surgery to ACT start in that panel.
+
+```{r setup, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(survival)
+library(survminer)
+library(gt)
+
+clean_dir      <- "clean_output"
+days_per_month <- 30.44
+km_break       <- 6
+summary_times  <- c(12, 24, 36)
+group_levels   <- c("No ACT", "ACT")
+palette        <- c("#999999", "#E41A1C")
+covariates     <- c("stage_grp", "Age", "Sex", "ECOG_grp")
+panel_titles   <- c(A = "MRD-negative at TP#1 and TP#2",
+                    B = "MRD-negative at TP#1, turned MRD-positive at TP#2",
+                    C = "MRD-positive at TP#1")
+clean_file <- "clean_output/Supplementary_Table_3_clean.rds"
+seed       <- 123
+n_sim      <- 1e5
+
+dt_km       <- readRDS(file.path(clean_dir, "dt_km.rds"))
+cox_formula <- as.formula(paste("Surv(time, status) ~", paste(c("group", covariates), collapse = " + ")))
+```
+
+## Cohort
+
+```{r flow}
+read.csv(file.path(clean_dir, "cohort_flow.csv"))
+dt_km %>% count(panel)
+```
+
+## Functions
+
+```{r functions}
+
+plot_km_curve <- function(df, title = NULL, legend_title = NULL, legend_labs = NULL,
+                          x_label = "Months from landmark") {
+  surv_fit <- survfit(Surv(time, status) ~ group, data = df)
+
+  ggsurvplot(
+    fit = surv_fit,
+    data = df,
+    title = title,
+    pval = FALSE,
+    risk.table = TRUE,
+    size = 1.1,
+    palette = palette,
+    xlab = x_label,
+    break.time.by = km_break,
+    ylab = "Disease Free Survival Probability",
+    legend.title = legend_title,
+    legend.labs = legend_labs
+  )
+}
+
+generate_survival_summary_table <- function(df, times = summary_times) {
+  df <- df %>% mutate(group = factor(group))
+  km_fit <- survfit(Surv(time, status) ~ group, data = df)
+
+  event_table <- df %>%
+    group_by(group) %>%
+    summarise(
+      N = n(),
+      Events = sum(status, na.rm = TRUE),
+      Event_pct = sprintf("%.1f%% (%d/%d)", 100 * Events / N, Events, N),
+      .groups = "drop"
+    ) %>%
+    transmute(group = as.character(group), timepoint = "Events", dfs_string = Event_pct)
+
+  dfs_estimates <- summary(km_fit, times = times)
+
+  dfs_table_raw <- tibble(
+    strata = dfs_estimates$strata,
+    time = dfs_estimates$time,
+    estimate = dfs_estimates$surv,
+    lower = dfs_estimates$lower,
+    upper = dfs_estimates$upper
+  ) %>%
+    mutate(
+      group = gsub("^group=", "", strata),
+      timepoint = paste0(time, "M-DFS %"),
+      dfs_string = sprintf("%.1f%% (%.1f-%.1f)", 100 * estimate, 100 * lower, 100 * upper)
+    ) %>%
+    select(group, timepoint, dfs_string)
+
+  dfs_table <- expand.grid(
+    group = levels(df$group),
+    timepoint = paste0(times, "M-DFS %"),
+    stringsAsFactors = FALSE
+  ) %>%
+    as_tibble() %>%
+    left_join(dfs_table_raw, by = c("group", "timepoint")) %>%
+    mutate(dfs_string = ifelse(is.na(dfs_string), "NR", dfs_string))
+
+  median_table <- surv_median(km_fit) %>%
+    mutate(
+      group = gsub("^group=", "", strata),
+      dfs_string = ifelse(is.na(median), "NR", sprintf("%.1f (%.1f-%.1f)", median, lower, upper)),
+      timepoint = "mDFS (mo)"
+    ) %>%
+    select(group, timepoint, dfs_string)
+
+  median_table <- tibble(group = levels(df$group)) %>%
+    left_join(median_table, by = "group") %>%
+    mutate(
+      timepoint = "mDFS (mo)",
+      dfs_string = ifelse(is.na(dfs_string), "NR", dfs_string)
+    )
+
+  bind_rows(event_table, dfs_table, median_table) %>%
+    pivot_wider(names_from = group, values_from = dfs_string)
+}
+
+# Landmark: median days from surgery to ACT start among patients who received ACT
+median_act_days <- function(d) median(d$days_to_act[d$p_hadAdj], na.rm = TRUE)
+
+# KM input after landmarking, with covariates carried along for the Cox model
+make_km_df <- function(d, landmark_months) {
+  d %>%
+    transmute(
+      id,
+      time   = p_drelDFS_Any / days_per_month,
+      status = as.integer(p_evtDFS),
+      group  = factor(ifelse(p_hadAdj, "ACT", "No ACT"), levels = group_levels),
+      across(all_of(covariates))
+    ) %>%
+    filter(!is.na(time), !is.na(status), !is.na(group)) %>%
+    filter(time > landmark_months) %>%
+    mutate(time = time - landmark_months)
+}
+
+run_panel <- function(p) {
+  d <- dt_km %>% filter(panel == p)
+
+  landmark_months <- median_act_days(d) / days_per_month
+  df_km <- make_km_df(d, landmark_months)
+
+  cat("Landmark:", round(landmark_months * days_per_month, 1), "days after surgery\n")
+  print(count(df_km, group))
+
+  print(plot_km_curve(df_km, title = panel_titles[[p]],
+                      legend_title = "Adjuvant Chemo", legend_labs = levels(df_km$group)))
+  print(generate_survival_summary_table(df_km, times = summary_times))
+
+  df_cox    <- as.data.frame(df_km)
+  fit_unadj <- coxph(Surv(time, status) ~ group, data = df_cox)
+  fit_adj   <- coxph(cox_formula, data = df_cox)
+
+  print(summary(fit_unadj)$conf.int)
+  print(summary(fit_adj)$conf.int)
+  print(ggforest(fit_adj, data = df_cox,
+                 main = paste("Adjusted Cox model:", panel_titles[[p]])))
+
+  invisible(list(km = df_km, fit_unadj = fit_unadj, fit_adj = fit_adj))
+}
+
+# Functions for table summary
+fmt_iqr <- function(x, digits = 1) {
+  x <- x[!is.na(x)]
+  if (!length(x)) return("\u2014")
+  q <- quantile(x, c(.25, .5, .75))
+  sprintf("%.*f [%.*f\u2013%.*f]", digits, q[2], digits, q[1], digits, q[3])
+}
+fmt_np <- function(n, tot) sprintf("%s (%.1f%%)", format(n, big.mark = ","), 100 * n / tot)
+fmt_p  <- function(p) if (!is.finite(p)) "\u2014" else if (p < 0.001) "<0.001" else formatC(p, 3, format = "f")
+
+p_cont <- function(x) tryCatch(fmt_p(wilcox.test(x ~ grp)$p.value), error = function(e) "\u2014")
+p_cat  <- function(v) {
+  mat <- table(v[!is.na(v)], grp[!is.na(v)])
+  tryCatch(
+    if (any(mat < 5)) fmt_p(fisher.test(mat, simulate.p.value = TRUE, B = n_sim)$p.value)
+    else fmt_p(chisq.test(mat)$p.value),
+    error = function(e) "\u2014")
+}
+
+row <- function(label, all = "", neg = "", pos = "", p = "") {
+  data.frame(Characteristic = label, All = all, Neg = neg, Pos = pos, p = p,
+             stringsAsFactors = FALSE)
+}
+
+cont_row <- function(label, x, digits = 1, test = TRUE) {
+  row(label, fmt_iqr(x, digits), fmt_iqr(x[in_neg], digits), fmt_iqr(x[in_pos], digits),
+      if (test) p_cont(x) else "")
+}
+
+cat_rows <- function(label, v) {
+  count <- function(keep) c(sum(keep, na.rm = TRUE),
+                            sum(keep & in_neg, na.rm = TRUE),
+                            sum(keep & in_pos, na.rm = TRUE))
+  level_rows <- lapply(levels(v), function(l) {
+    n <- count(v == l)
+    row(paste0("    ", l), fmt_np(n[1], N[1]), fmt_np(n[2], N[2]), fmt_np(n[3], N[3]))
+  })
+  miss <- count(is.na(v))
+  miss_row <- if (miss[1] > 0) {
+    row("    Missing", fmt_np(miss[1], N[1]), fmt_np(miss[2], N[2]), fmt_np(miss[3], N[3]))
+  }
+  bind_rows(row(label, p = p_cat(v)), level_rows, miss_row)
+}
+
+```
+
+## Panel A: MRD-negative at TP#1 and TP#2
+
+Adjusted HR (ACT vs No ACT, reference = No ACT) is shown in the forest plot below.
+
+```{r panel_a}
+res_a <- run_panel("A")
+```
+
+## Panel B: MRD-negative at TP#1, turned MRD-positive at TP#2
+
+Adjusted HR (ACT vs No ACT, reference = No ACT) is shown in the forest plot below.
+
+```{r panel_b}
+res_b <- run_panel("B")
+```
+
+## Panel C: MRD-positive at TP#1
+
+Adjusted HR (ACT vs No ACT, reference = No ACT) is shown in the forest plot below.
+
+```{r panel_c}
+res_c <- run_panel("C")
+
+```
+
+
+## Supplementary Table 3
+
+```{r table 3}
+# Characteristics of patients MRD-negative at TP#1, by TP#2 result.
+d   <- readRDS(clean_file)
+grp <- d$grp
+lv  <- levels(grp)
+grp_labels <- c(NEGATIVE = "TP2-Negative", POSITIVE = "TP2-Positive")
+
+in_neg <- grp == lv[1]
+in_pos <- grp == lv[2]
+N <- c(length(grp), sum(in_neg), sum(in_pos))
+
+cat_vars <- c("Age group"                = "age_grp",
+              "Sex"                      = "sex",
+              "ECOG performance status"  = "ecog",
+              "Pathologic stage"         = "stage",
+              "Primary tumor (pT)"       = "pT_clean",
+              "Nodal status (pN)"        = "pN_clean",
+              "Tumor sidedness"          = "sidedness",
+              "Primary site"             = "site",
+              "MMR/MSI status"           = "mmr",
+              "RAS mutational status"    = "ras",
+              "BRAF mutational status"   = "braf",
+              "Lymphovascular invasion"  = "lvi",
+              "Perineural invasion"      = "pni")
+
+set.seed(seed)
+tbl <- bind_rows(
+  row("N", format(N[1], big.mark = ","), format(N[2], big.mark = ","), format(N[3], big.mark = ",")),
+  cont_row("Length of follow-up (observed), median [IQR], mo", d$fu_obs_mo, test = FALSE),
+  cont_row("Age, median [IQR], y", d$Age, digits = 0),
+  lapply(names(cat_vars), function(l) cat_rows(l, d[[cat_vars[[l]]]]))
+)
+
+names(tbl) <- c("Characteristic",
+                sprintf("All (N=%s)", format(N[1], big.mark = ",")),
+                sprintf("%s (N=%s)", grp_labels[[lv[1]]], format(N[2], big.mark = ",")),
+                sprintf("%s (N=%s)", grp_labels[[lv[2]]], format(N[3], big.mark = ",")),
+                "p")
+
+is_level   <- startsWith(tbl$Characteristic, "    ")
+is_missing <- startsWith(tbl$Characteristic, "    Missing")
+
+gt_tbl <- tbl %>%
+  gt() %>%
+  tab_header(title = "Supplementary Table 3",
+             subtitle = "Characteristics of patients MRD-negative at TP#1, by TP#2 result") %>%
+  cols_align(align = "left",   columns = 1) %>%
+  cols_align(align = "center", columns = -1) %>%
+  text_transform(locations = cells_body(columns = 1),
+                 fn = function(x) sub("^\\s{4}", "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;", x)) %>%
+  tab_style(style = list(cell_text(weight = "bold"), cell_fill(color = "#F2F2F2")),
+            locations = cells_body(rows = !is_level)) %>%
+  tab_style(style = cell_text(color = "#888888"),
+            locations = cells_body(rows = is_missing)) %>%
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_column_labels()) %>%
+  tab_options(table.font.size = 12, data_row.padding = px(3))
+
+gt_tbl
+```
+
