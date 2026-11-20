@@ -35,18 +35,21 @@ m["mrd_pos_f"] = m["mrd_pos"].astype(float)
 m["age10"] = m["age"] / 10.0
 m["log1p_mtm"] = np.log1p(pd.to_numeric(m["mrd_mtm"], errors="coerce"))
 
+LM_DAYS = 84
 coh = m[m["arm"].isin(["delayed", "late"])].copy()
-coh["_t"] = pd.to_numeric(coh["dfs_days"], errors="coerce") / DAYS_PER_MONTH
+_dfs = pd.to_numeric(coh["dfs_days"], errors="coerce")
+_evt = pd.to_numeric(coh["dfs_evt"], errors="coerce")
+coh = coh[_dfs.notna() & _evt.notna() & (_dfs >= LM_DAYS)].copy()
+coh["_t"] = (pd.to_numeric(coh["dfs_days"], errors="coerce") - LM_DAYS) / DAYS_PER_MONTH
 coh["_e"] = pd.to_numeric(coh["dfs_evt"], errors="coerce")
-coh = coh[coh["_t"].notna() & coh["_e"].notna() & (coh["_t"] > 0)].copy()
-print(f"Late-starter cohort (ACT 8\u201324w): n={len(coh)}, DFS events={int(coh['_e'].sum())}")
-
+_same = (coh["_t"] == 0) & (coh["_e"] == 1)
+coh.loc[_same, "_t"] = 1.0 / DAYS_PER_MONTH
+print(f"Late-starter cohort (ACT 8\u201324w), 12-week landmark: n={len(coh)}, DFS events={int(coh['_e'].sum())}")
 
 def stage_group(d):
     g = pd.to_numeric(d["stage_num"], errors="coerce")
     return pd.Series(np.select([g.isin([1, 2]), g.eq(3), g.eq(4)], STAGE_ORDER, default=None),
                      index=d.index).where(lambda s: s.notna())
-
 
 def build_stage_cols(d):
     grp = stage_group(d)
@@ -61,11 +64,9 @@ def build_stage_cols(d):
         d[c] = dd[c]
     return list(dd.columns)
 
-
 def stage_ref(d):
     present = [s for s in STAGE_ORDER if (stage_group(d) == s).any()]
     return present[0] if len(present) >= 2 else "reference"
-
 
 def cox_fit(d, cols, penalizers=(0.0, 0.1, 0.5, 1.0)):
     use = d.dropna(subset=["_t", "_e"] + cols).copy()
@@ -92,7 +93,6 @@ def cox_fit(d, cols, penalizers=(0.0, 0.1, 0.5, 1.0)):
             continue
     return last if last is not None else ([], meta)
 
-
 UNI_VARS = [("MRD-window ctDNA positive", "mrd_pos_f"), ("Age (per 10 y)", "age10"),
             ("ECOG \u22651", "ecog_ge1"), ("Male sex", "male"), ("pT4 (vs T1\u2013T3)", "pT4"),
             ("Node positive (N1/N2)", "pN_pos"), ("Right-sided (vs left)", "right_sided"),
@@ -101,7 +101,6 @@ UNI_VARS = [("MRD-window ctDNA positive", "mrd_pos_f"), ("Age (per 10 y)", "age1
             ("LVI present", "lvi_present"), ("PNI present", "pni_present"),
             ("log(1+MTM) [all]", "log1p_mtm")]
 
-
 def label_of(col, ref_roman):
     if col.startswith("stage_"):
         return f"Stage {col.split('_', 1)[1]} (vs {ref_roman})"
@@ -109,7 +108,6 @@ def label_of(col, ref_roman):
         if c == col:
             return lab
     return col
-
 
 stage_cols = build_stage_cols(coh)
 ref = stage_ref(coh)
@@ -138,7 +136,6 @@ plot_forest(uni_forest, "Figure 2C. Univariable predictors of DFS (ACT 8\u201324
 print("\nFIGURE 2C — univariable predictors of DFS")
 print(uni_df.to_string(index=False))
 
-
 core_cols = ["mrd_pos_f"] + stage_cols + ["age10", "ecog_ge1", "right_sided"]
 crows, cmeta = cox_fit(coh, core_cols)
 core_rows, core_forest = [], []
@@ -156,7 +153,6 @@ plot_forest(core_forest, "Figure 2D. Multivariable (CORE) predictors of DFS (ACT
 print(f"\nFIGURE 2D — CORE multivariable model (n={cmeta['n']}, events={cmeta['events']}, "
       f"C-index={cmeta['cindex']:.3f})")
 print(core_df.to_string(index=False))
-
 
 pos = coh[coh["mrd_pos"] & (coh["stage_num"].isin([1, 2, 3]))].copy()
 pos["stage_III"] = (pd.to_numeric(pos["stage_num"], errors="coerce") == 3).astype(float)
