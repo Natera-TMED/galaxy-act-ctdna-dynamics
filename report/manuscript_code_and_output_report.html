@@ -702,8 +702,7 @@ def load_dynamics_cohort():
 </details>
 <h2 id="sec0">Table 1 — Patient characteristics of the evaluable cohort (N = 3,650)</h2>
 <h3>Code</h3>
-<pre class="code">&quot;&quot;&quot;Generates Table 1.&quot;&quot;&quot;
-import os
+<pre class="code">import os
 import pandas as pd
 
 from _common import OUT_DIR, load_evaluable_cohort, derive_baseline, build_demographics_table
@@ -1231,12 +1230,10 @@ Saved -&gt; manuscript_project/manuscript_final_code/outputs/table_1_evaluable_3
 </table></div>
 <h2 id="sec1">Supplementary Table 1 &amp; Supplementary Table 2 — Cohort 1 baseline characteristics</h2>
 <h3>Code</h3>
-<pre class="code">&quot;&quot;&quot;Generates Supplementary Table 1 and Supplementary Table 2.&quot;&quot;&quot;
-from _common import (OUT_DIR, derive_baseline, build_demographics_table,
+<pre class="code">from _common import (OUT_DIR, derive_baseline, build_demographics_table,
                      load_act_timing_cohort, simplify_stage)
 import os
 
-# ── Cohort: ACT start-timing cohort, with stage + baseline variables ─────────────
 m = load_act_timing_cohort()
 m[&quot;stage_num&quot;] = m[&quot;p_StagePath&quot;].apply(simplify_stage)
 m = derive_baseline(m, &quot;mrd_mtm&quot;)
@@ -1244,7 +1241,6 @@ m = derive_baseline(m, &quot;mrd_mtm&quot;)
 ARM = {&quot;no_ACT&quot;: &quot;No ACT&quot;, &quot;early&quot;: &quot;ACT 0\u20138w&quot;, &quot;delayed&quot;: &quot;ACT 8\u201312w&quot;,
        &quot;late&quot;: &quot;ACT 12\u201324w&quot;}
 
-# ── Supplementary Table 1 ────────────────────────────────────────────────────────
 pos = m[m[&quot;mrd_pos&quot;]].copy()
 cols1 = [
     (&quot;All&quot;,            pos),
@@ -1264,7 +1260,6 @@ supp1[P_PAIR] = build_demographics_table(cols1, groups_pair, include_mrd_row=Fal
 out1 = os.path.join(OUT_DIR, &quot;supplementary_table_1_cohort1_MRDpos_466_by_arm.csv&quot;)
 supp1.to_csv(out1, index=False)
 
-# ── Supplementary Table 2 ────────────────────────────────────────────────────────
 late = m[m[&quot;arm&quot;].isin([&quot;delayed&quot;, &quot;late&quot;])].copy()
 cols2 = [
     (&quot;All&quot;,  late),
@@ -1277,7 +1272,6 @@ supp2 = build_demographics_table(cols2, groups2, include_mrd_row=False)
 out2 = os.path.join(OUT_DIR, &quot;supplementary_table_2_cohort1_lateACT_292_MRDnegVsPos.csv&quot;)
 supp2.to_csv(out2, index=False)
 
-# ── Console ──────────────────────────────────────────────────────────────────--
 import pandas as pd
 pd.set_option(&quot;display.max_rows&quot;, None, &quot;display.width&quot;, 220)
 print(&quot;=&quot; * 110)
@@ -2476,8 +2470,7 @@ Saved:
 </table></div>
 <h2 id="sec2">Figure 2A–2B and Supplementary Figures 1–2 — ACT timing among MRD-positive patients</h2>
 <h3>Code</h3>
-<pre class="code">&quot;&quot;&quot;Generates Figure 2A, Figure 2B, Supplementary Figure 1, and Supplementary Figure 2.&quot;&quot;&quot;
-import os
+<pre class="code">import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -2487,13 +2480,12 @@ from _common import (OUT_DIR, DAYS_PER_MONTH, load_act_timing_cohort, simplify_s
                      landmark_cox_adjusted, adj_rmst_contrasts, rmst_difference,
                      mtm_hi_lo_cox, fmt_p, hide_spines)
 
-LM = 84                                  # 12-week landmark (days)
+LM = 84
 COVS = (&quot;stage&quot;, &quot;age&quot;, &quot;ecog&quot;, &quot;mtm&quot;)
 ARM_LBL = {&quot;no_ACT&quot;: &quot;No ACT&quot;, &quot;early&quot;: &quot;ACT 0\u20138w&quot;, &quot;delayed&quot;: &quot;ACT 8\u201312w&quot;}
 ARM_COL = {&quot;no_ACT&quot;: &quot;#9E9E9E&quot;, &quot;early&quot;: &quot;#1B5E20&quot;, &quot;delayed&quot;: &quot;#008BCE&quot;}
 ARMS = [&quot;no_ACT&quot;, &quot;early&quot;, &quot;delayed&quot;]
 
-# ── Build the MRD-positive cohort with model covariates ─────────────────────────
 m = load_act_timing_cohort()
 m[&quot;stage_num&quot;] = m[&quot;p_StagePath&quot;].apply(simplify_stage)
 m[&quot;age&quot;] = pd.to_numeric(m[&quot;Age&quot;], errors=&quot;coerce&quot;)
@@ -2505,8 +2497,8 @@ print(f&quot;TP#1 MRD-positive cohort: N = {len(pos)}&quot;)
 
 def km_panel(endpoint, panel, title):
     d = landmark_frame(pos, LM, endpoint)
-    hr_vs_noACT = landmark_cox_adjusted(d, ARMS, &quot;no_ACT&quot;, COVS)       # early &amp; delayed vs No ACT
-    hr_e_vs_d   = landmark_cox_adjusted(d, [&quot;early&quot;, &quot;delayed&quot;], &quot;early&quot;, COVS)  # delayed vs early
+    hr_vs_noACT = landmark_cox_adjusted(d, ARMS, &quot;no_ACT&quot;, COVS)
+    hr_e_vs_d   = landmark_cox_adjusted(d, [&quot;early&quot;, &quot;delayed&quot;], &quot;early&quot;, COVS)
 
     xmax = int(np.ceil(d[&quot;_t&quot;].max() / 6) * 6)
     xticks = list(range(0, xmax + 1, 6))
@@ -2531,7 +2523,6 @@ def km_panel(endpoint, panel, title):
     ax.tick_params(labelbottom=False)
     ax.legend(loc=&quot;lower left&quot;, fontsize=8.5, frameon=False)
 
-    # delayed vs early = inverse of the (delayed-vs-early) HR from the two-arm fit
     de = hr_e_vs_d.get(&quot;delayed&quot;)
     e_vs_d = (1 / de[0], 1 / de[2], 1 / de[1], de[3]) if de else None
     e = hr_vs_noACT.get(&quot;early&quot;); dd = hr_vs_noACT.get(&quot;delayed&quot;)
@@ -2563,7 +2554,6 @@ def km_panel(endpoint, panel, title):
     return pd.DataFrame(rows)
 
 
-# ── Figure 2A (DFS) and Figure 2B (OS) ───────────────────────────────────────────
 tab_dfs = km_panel(&quot;DFS&quot;, &quot;A&quot;, &quot;Figure 2A. DFS by ACT timing (MRD-positive)&quot;)
 tab_os  = km_panel(&quot;OS&quot;,  &quot;B&quot;, &quot;Figure 2B. OS by ACT timing (MRD-positive)&quot;)
 hr_tab = pd.concat([tab_dfs, tab_os], ignore_index=True)
@@ -2572,7 +2562,6 @@ print(&quot;\nFigure 2A / 2B — adjusted landmark hazard ratios&quot;)
 print(hr_tab.to_string(index=False))
 
 
-# ── Supplementary Figure 1 ──────────────────────────────────────────────────────
 d_dfs = landmark_frame(pos, LM, &quot;DFS&quot;)
 present = [a for a in [&quot;no_ACT&quot;, &quot;early&quot;, &quot;delayed&quot;, &quot;late&quot;]
            if int((d_dfs[&quot;arm&quot;] == a).sum()) &gt;= 5]
@@ -2582,19 +2571,17 @@ ref_t = d_dfs[d_dfs[&quot;arm&quot;] == &quot;no_ACT&quot;][&quot;_t&quot;].valu
 ref_e = d_dfs[d_dfs[&quot;arm&quot;] == &quot;no_ACT&quot;][&quot;_e&quot;].values
 
 CURVES = [(&quot;early&quot;, &quot;ACT 0\u20138w&quot;, &quot;#1B5E20&quot;), (&quot;delayed&quot;, &quot;ACT 8\u201312w&quot;, &quot;#008BCE&quot;)]
-gain = {a: {&quot;adj&quot;: [], &quot;un&quot;: []} for a, _, _ in CURVES}   # RMST gain vs No ACT
-# direct adjusted contrasts (reported at 24 &amp; 36 mo): {contrast: {H: (diff,lo,hi,p)}}
+gain = {a: {&quot;adj&quot;: [], &quot;un&quot;: []} for a, _, _ in CURVES}
 direct = {&quot;Early vs No ACT&quot;: {}, &quot;Delayed vs No ACT&quot;: {}, &quot;Early vs Delayed&quot;: {}}
 
 for h in horizons:
-    vs_no = adj_rmst_contrasts(d_dfs, present, &quot;no_ACT&quot;, COVS, h)      # early &amp; delayed vs No ACT
+    vs_no = adj_rmst_contrasts(d_dfs, present, &quot;no_ACT&quot;, COVS, h)
     for a, _, _ in CURVES:
         sub = d_dfs[d_dfs[&quot;arm&quot;] == a]
         gain[a][&quot;adj&quot;].append(vs_no[a][0])
         gain[a][&quot;un&quot;].append(rmst_difference(ref_t, ref_e, sub[&quot;_t&quot;].values, sub[&quot;_e&quot;].values, h)[0])
     direct[&quot;Early vs No ACT&quot;][h] = vs_no[&quot;early&quot;]
     direct[&quot;Delayed vs No ACT&quot;][h] = vs_no[&quot;delayed&quot;]
-    # early vs delayed: separate two-arm model (reference = delayed -&gt; &quot;early&quot; = early - delayed)
     direct[&quot;Early vs Delayed&quot;][h] = adj_rmst_contrasts(d_dfs, [&quot;delayed&quot;, &quot;early&quot;], &quot;delayed&quot;, COVS, h)[&quot;early&quot;]
 
 fig, ax = plt.subplots(figsize=(10.5, 5.6))
@@ -2610,7 +2597,6 @@ ax.set_xticks(horizons); ax.grid(axis=&quot;y&quot;, color=&quot;#DDDDDD&quot;, 
 hide_spines(ax)
 ax.legend(loc=&quot;upper left&quot;, fontsize=9, frameon=False)
 
-# side annotation: direct adjusted RMST contrasts at 24 and 36 months only
 blocks = [(&quot;Early vs Delayed ACT: adj. RMST (direct):&quot;, &quot;Early vs Delayed&quot;),
           (&quot;Early vs No ACT: adj. RMST (direct):&quot;, &quot;Early vs No ACT&quot;),
           (&quot;Delayed vs No ACT: adj. RMST (direct):&quot;, &quot;Delayed vs No ACT&quot;)]
@@ -2630,7 +2616,6 @@ for ext in (&quot;png&quot;, &quot;pdf&quot;):
                 dpi=300, bbox_inches=&quot;tight&quot;, facecolor=&quot;white&quot;)
 plt.close(fig)
 
-# CSV: the direct adjusted RMST contrasts at 24 and 36 months (manuscript values)
 rows24_36 = []
 for head, key in blocks:
     for H in (24, 36):
@@ -2643,12 +2628,10 @@ print(&quot;\nSupplementary Figure 1 — direct adjusted RMST contrasts (24 &amp
 print(rmst_df.to_string(index=False))
 
 
-# ── Supplementary Figure 2 ──────────────────────────────────────────────────────
 mtm_median = pos[&quot;mrd_mtm&quot;].median()
 pos[&quot;mtm_grp&quot;] = np.where(pos[&quot;mrd_mtm&quot;] &gt;= mtm_median, &quot;high&quot;, &quot;low&quot;)
 print(f&quot;\nMedian TP#1 ctDNA burden across the MRD-positive cohort = {mtm_median:.3f} MTM/mL&quot;)
 
-# plotting / table order (top-to-bottom): arm x burden
 STRATA = [(&quot;no_ACT&quot;, &quot;low&quot;), (&quot;no_ACT&quot;, &quot;high&quot;),
           (&quot;early&quot;, &quot;low&quot;), (&quot;early&quot;, &quot;high&quot;),
           (&quot;delayed&quot;, &quot;low&quot;), (&quot;delayed&quot;, &quot;high&quot;)]
@@ -2669,7 +2652,6 @@ for col, (endpoint, panel) in enumerate([(&quot;DFS&quot;, &quot;A&quot;), (&quo
     xticks = list(range(0, xmax + 1, 6))
     ax = fig.add_subplot(gs[0, col]); rax = fig.add_subplot(gs[1, col], sharex=ax)
 
-    # curves
     risk_strata = []
     for arm, grp in STRATA:
         sub = d2[(d2[&quot;arm&quot;] == arm) &amp; (d2[&quot;mtm_grp&quot;] == grp)]
@@ -2680,7 +2662,6 @@ for col, (endpoint, panel) in enumerate([(&quot;DFS&quot;, &quot;A&quot;), (&quo
                       ls=BURDEN_LS[grp], label=lbl)
         risk_strata.append((f&quot;{ROW_LBL[arm]} / {grp[0].upper()}&quot;, ARM_COL[arm], sub[&quot;_t&quot;].values))
 
-    # per-arm high-vs-low adjusted HR (annotation, top-left)
     ann_lines = []
     for arm in ARMS:
         hr, lo, hi, p, pen, n_lo, n_hi, ev_lo, ev_hi, lr_p = mtm_hi_lo_cox(d2[d2[&quot;arm&quot;] == arm])
@@ -2991,8 +2972,7 @@ ACT 8–12w       OS     36      20       9        4           0.881   0.251    
 </table></div>
 <h2 id="sec3">Figure 2C–2E — prognostic analysis within late-starter ACT patients (ACT 8–24w)</h2>
 <h3>Code</h3>
-<pre class="code">&quot;&quot;&quot;Generates Figure 2C, Figure 2D, and Figure 2E.&quot;&quot;&quot;
-import os
+<pre class="code">import os
 import numpy as np
 import pandas as pd
 from lifelines import CoxPHFitter
@@ -3001,9 +2981,8 @@ from _common import OUT_DIR, DAYS_PER_MONTH, load_act_timing_cohort, simplify_st
     plot_forest, fmt_p
 
 MIN_EVENTS = 5
-STAGE_ORDER = [&quot;I\u2013II&quot;, &quot;III&quot;, &quot;IV&quot;]        # display order; reference = first present
+STAGE_ORDER = [&quot;I\u2013II&quot;, &quot;III&quot;, &quot;IV&quot;]
 
-# ── Load cohort + derive encoded predictors (late starters, ACT 8-24w) ──────────
 m = load_act_timing_cohort()
 m[&quot;stage_num&quot;] = m[&quot;p_StagePath&quot;].apply(simplify_stage)
 m[&quot;age&quot;] = pd.to_numeric(m[&quot;Age&quot;], errors=&quot;coerce&quot;)
@@ -3030,18 +3009,21 @@ m[&quot;mrd_pos_f&quot;] = m[&quot;mrd_pos&quot;].astype(float)
 m[&quot;age10&quot;] = m[&quot;age&quot;] / 10.0
 m[&quot;log1p_mtm&quot;] = np.log1p(pd.to_numeric(m[&quot;mrd_mtm&quot;], errors=&quot;coerce&quot;))
 
+LM_DAYS = 84
 coh = m[m[&quot;arm&quot;].isin([&quot;delayed&quot;, &quot;late&quot;])].copy()
-coh[&quot;_t&quot;] = pd.to_numeric(coh[&quot;dfs_days&quot;], errors=&quot;coerce&quot;) / DAYS_PER_MONTH
+_dfs = pd.to_numeric(coh[&quot;dfs_days&quot;], errors=&quot;coerce&quot;)
+_evt = pd.to_numeric(coh[&quot;dfs_evt&quot;], errors=&quot;coerce&quot;)
+coh = coh[_dfs.notna() &amp; _evt.notna() &amp; (_dfs &gt;= LM_DAYS)].copy()
+coh[&quot;_t&quot;] = (pd.to_numeric(coh[&quot;dfs_days&quot;], errors=&quot;coerce&quot;) - LM_DAYS) / DAYS_PER_MONTH
 coh[&quot;_e&quot;] = pd.to_numeric(coh[&quot;dfs_evt&quot;], errors=&quot;coerce&quot;)
-coh = coh[coh[&quot;_t&quot;].notna() &amp; coh[&quot;_e&quot;].notna() &amp; (coh[&quot;_t&quot;] &gt; 0)].copy()
-print(f&quot;Late-starter cohort (ACT 8\u201324w): n={len(coh)}, DFS events={int(coh[&#x27;_e&#x27;].sum())}&quot;)
-
+_same = (coh[&quot;_t&quot;] == 0) &amp; (coh[&quot;_e&quot;] == 1)
+coh.loc[_same, &quot;_t&quot;] = 1.0 / DAYS_PER_MONTH
+print(f&quot;Late-starter cohort (ACT 8\u201324w), 12-week landmark: n={len(coh)}, DFS events={int(coh[&#x27;_e&#x27;].sum())}&quot;)
 
 def stage_group(d):
     g = pd.to_numeric(d[&quot;stage_num&quot;], errors=&quot;coerce&quot;)
     return pd.Series(np.select([g.isin([1, 2]), g.eq(3), g.eq(4)], STAGE_ORDER, default=None),
                      index=d.index).where(lambda s: s.notna())
-
 
 def build_stage_cols(d):
     grp = stage_group(d)
@@ -3056,11 +3038,9 @@ def build_stage_cols(d):
         d[c] = dd[c]
     return list(dd.columns)
 
-
 def stage_ref(d):
     present = [s for s in STAGE_ORDER if (stage_group(d) == s).any()]
     return present[0] if len(present) &gt;= 2 else &quot;reference&quot;
-
 
 def cox_fit(d, cols, penalizers=(0.0, 0.1, 0.5, 1.0)):
     use = d.dropna(subset=[&quot;_t&quot;, &quot;_e&quot;] + cols).copy()
@@ -3087,7 +3067,6 @@ def cox_fit(d, cols, penalizers=(0.0, 0.1, 0.5, 1.0)):
             continue
     return last if last is not None else ([], meta)
 
-
 UNI_VARS = [(&quot;MRD-window ctDNA positive&quot;, &quot;mrd_pos_f&quot;), (&quot;Age (per 10 y)&quot;, &quot;age10&quot;),
             (&quot;ECOG \u22651&quot;, &quot;ecog_ge1&quot;), (&quot;Male sex&quot;, &quot;male&quot;), (&quot;pT4 (vs T1\u2013T3)&quot;, &quot;pT4&quot;),
             (&quot;Node positive (N1/N2)&quot;, &quot;pN_pos&quot;), (&quot;Right-sided (vs left)&quot;, &quot;right_sided&quot;),
@@ -3095,7 +3074,6 @@ UNI_VARS = [(&quot;MRD-window ctDNA positive&quot;, &quot;mrd_pos_f&quot;), (&qu
             (&quot;RAS mutant&quot;, &quot;ras_pos&quot;), (&quot;BRAF mutant&quot;, &quot;braf_pos&quot;),
             (&quot;LVI present&quot;, &quot;lvi_present&quot;), (&quot;PNI present&quot;, &quot;pni_present&quot;),
             (&quot;log(1+MTM) [all]&quot;, &quot;log1p_mtm&quot;)]
-
 
 def label_of(col, ref_roman):
     if col.startswith(&quot;stage_&quot;):
@@ -3105,8 +3083,6 @@ def label_of(col, ref_roman):
             return lab
     return col
 
-
-# ── Figure 2C ────────────────────────────────────────────────────────────────────
 stage_cols = build_stage_cols(coh)
 ref = stage_ref(coh)
 uni_rows, uni_forest = [], []
@@ -3134,8 +3110,6 @@ plot_forest(uni_forest, &quot;Figure 2C. Univariable predictors of DFS (ACT 8\u2
 print(&quot;\nFIGURE 2C — univariable predictors of DFS&quot;)
 print(uni_df.to_string(index=False))
 
-
-# ── Figure 2D ────────────────────────────────────────────────────────────────────
 core_cols = [&quot;mrd_pos_f&quot;] + stage_cols + [&quot;age10&quot;, &quot;ecog_ge1&quot;, &quot;right_sided&quot;]
 crows, cmeta = cox_fit(coh, core_cols)
 core_rows, core_forest = [], []
@@ -3154,8 +3128,6 @@ print(f&quot;\nFIGURE 2D — CORE multivariable model (n={cmeta[&#x27;n&#x27;]},
       f&quot;C-index={cmeta[&#x27;cindex&#x27;]:.3f})&quot;)
 print(core_df.to_string(index=False))
 
-
-# ── Figure 2E ────────────────────────────────────────────────────────────────────
 pos = coh[coh[&quot;mrd_pos&quot;] &amp; (coh[&quot;stage_num&quot;].isin([1, 2, 3]))].copy()
 pos[&quot;stage_III&quot;] = (pd.to_numeric(pos[&quot;stage_num&quot;], errors=&quot;coerce&quot;) == 3).astype(float)
 e2_cols = [&quot;log1p_mtm&quot;, &quot;stage_III&quot;, &quot;age10&quot;, &quot;ecog_ge1&quot;, &quot;right_sided&quot;]
@@ -3178,7 +3150,7 @@ print(f&quot;\nFIGURE 2E — ctDNA burden (MRD+, Stage I\u2013III; n={emeta[&#x2
 print(e2_df.to_string(index=False))
 </pre>
 <h3>Console output</h3>
-<pre class="out">Late-starter cohort (ACT 8–24w): n=292, DFS events=81
+<pre class="out">Late-starter cohort (ACT 8–24w), 12-week landmark: n=292, DFS events=81
 
 FIGURE 2C — univariable predictors of DFS
                  variable    HR  CI_low  CI_high      p   n  events
@@ -3522,8 +3494,7 @@ Right-sided (vs left) 1.605   0.774    3.329 0.2036       56            40    0.
 </table></div>
 <h2 id="sec4">Post-operative complication confounding assessment (Cohort 1)</h2>
 <h3>Code</h3>
-<pre class="code">&quot;&quot;&quot;Generates the post-operative complication confounding assessment (Cohort 1).&quot;&quot;&quot;
-import os
+<pre class="code">import os
 import numpy as np
 import pandas as pd
 from lifelines import CoxPHFitter
@@ -3535,12 +3506,11 @@ from _common import OUT_DIR, DAYS_PER_MONTH, load_act_timing_cohort, \
 LM = 84
 MODEL_COVS = [&quot;stage_num&quot;, &quot;age&quot;, &quot;ecog_ge1&quot;, &quot;log_mtm&quot;]
 
-# ── Assemble the MRD-positive early+delayed landmark frame with complications ────
 m = load_act_timing_cohort()
 m[&quot;stage_num&quot;] = m[&quot;p_StagePath&quot;].apply(simplify_stage)
 pos = m[m[&quot;mrd_pos&quot;]].copy()
 
-ed = pos[pos[&quot;arm&quot;].isin([&quot;early&quot;, &quot;delayed&quot;])].copy()   # cd2 = Clavien-Dindo &gt;=2 complication flag
+ed = pos[pos[&quot;arm&quot;].isin([&quot;early&quot;, &quot;delayed&quot;])].copy()
 ed[&quot;age&quot;] = pd.to_numeric(ed[&quot;Age&quot;], errors=&quot;coerce&quot;)
 ed[&quot;ecog_ge1&quot;] = np.where(pd.to_numeric(ed[&quot;ECOG&quot;], errors=&quot;coerce&quot;) &gt;= 1, 1.0, 0.0)
 ed.loc[ed[&quot;ECOG&quot;].isna(), &quot;ecog_ge1&quot;] = np.nan
@@ -3554,7 +3524,7 @@ same = (ed[&quot;_t&quot;] == 0) &amp; (ed[&quot;_e&quot;] == 1)
 ed.loc[same, &quot;_t&quot;] = 1.0 / DAYS_PER_MONTH
 
 base_full = ed.dropna(subset=[&quot;_t&quot;, &quot;_e&quot;] + MODEL_COVS).copy()
-cc = base_full.dropna(subset=[&quot;cd2&quot;]).copy()   # complication-known subset
+cc = base_full.dropna(subset=[&quot;cd2&quot;]).copy()
 
 
 def fit_delayed_hr(dd, extra_cols=()):
@@ -3610,7 +3580,6 @@ print(f&quot;Early+delayed after 12-wk landmark &amp; complete model covariates 
 print(f&quot;Complication status known (CD&gt;=2 non-missing)                  : n={len(cc)} &quot;
       f&quot;(missing = {len(base_full) - len(cc)})&quot;)
 
-# ── (a) complication vs EXPOSURE (ACT timing) ────────────────────────────────────
 tab = pd.crosstab(cc[&quot;arm&quot;], cc[&quot;cd2&quot;])
 print(&quot;\n(a) Association of complication with ACT timing (exposure):&quot;)
 rate = {}
@@ -3622,12 +3591,10 @@ orr, pf = fisher_exact([[int(tab.loc[&quot;early&quot;, 1.0]), int(tab.loc[&quot
                         [int(tab.loc[&quot;delayed&quot;, 1.0]), int(tab.loc[&quot;delayed&quot;, 0.0])]])
 print(f&quot;    Fisher exact (delayed vs early CD&gt;=2): OR={orr:.3f}, p={pf:.3f}&quot;)
 
-# ── (b) complication vs OUTCOME (DFS) ────────────────────────────────────────────
 cd_hr = fit_cov_hr(cc, &quot;cd2&quot;)
 print(&quot;\n(b) Association of complication with DFS (adjusted for arm+stage+age+ECOG+log(1+MTM)):&quot;)
 print(f&quot;    CD&gt;=2 vs none : HR={cd_hr[0]:.3f} ({cd_hr[1]:.3f}-{cd_hr[2]:.3f}) p={cd_hr[3]:.3f}&quot;)
 
-# ── (c) change-in-estimate for the timing HR ─────────────────────────────────────
 hr_primary = fit_delayed_hr(base_full)
 hr_base_cc = fit_delayed_hr(cc)
 hr_adj_cc  = fit_delayed_hr(cc, extra_cols=[&quot;cd2&quot;])
@@ -3773,14 +3740,12 @@ Saved -&gt; manuscript_project/manuscript_final_code/outputs/complication_confou
 </table></div>
 <h2 id="sec5">Supplementary Table 4 — Cohort 3 baseline characteristics (ACT-duration cohort, N = 1,010)</h2>
 <h3>Code</h3>
-<pre class="code">&quot;&quot;&quot;Generates Supplementary Table 4.&quot;&quot;&quot;
-import os
+<pre class="code">import os
 import numpy as np
 import pandas as pd
 
 from _common import OUT_DIR, load_dynamics_cohort, derive_baseline, build_demographics_table
 
-# ── Cohort: ctDNA-dynamics (1,010); MRD status from TP#1 burden ─────────────────
 d = load_dynamics_cohort()
 d[&quot;mrd_pos&quot;] = pd.to_numeric(d[&quot;MTM_tp1&quot;], errors=&quot;coerce&quot;) &gt; 0
 m = derive_baseline(d, &quot;MTM_tp1&quot;)
@@ -4330,8 +4295,7 @@ Saved -&gt; manuscript_project/manuscript_final_code/outputs/supplementary_table
 </table></div>
 <h2 id="sec6">Supplementary Table 5 and Figure 4 — serial ctDNA dynamics and ACT duration (Cohort 3)</h2>
 <h3>Code</h3>
-<pre class="code">&quot;&quot;&quot;Generates Supplementary Table 5 and Figure 4 (panels A-F).&quot;&quot;&quot;
-import os
+<pre class="code">import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -4351,7 +4315,6 @@ COLORS = {&quot;sustained_negative&quot;: &quot;#1B5E20&quot;, &quot;clearance&q
 df = load_dynamics_cohort()
 
 
-# ── Landmark preparation (reset the clock at the TP#2/#3 assessment) ─────────────
 def landmark_prep(d, dfs_col=&quot;p_drelDFS_Any&quot;, evt_col=&quot;p_evtDFS&quot;, lm_col=&quot;tp2_day&quot;):
     d = d.dropna(subset=[dfs_col, evt_col, lm_col]).copy()
     d[&quot;_evt&quot;] = d[evt_col].astype(int)
@@ -4410,7 +4373,6 @@ def cox_multivariate(lm_df, ref_key=&quot;sustained_negative&quot;):
     return {}
 
 
-# ── Supplementary Table 5 ────────────────────────────────────────────────────────
 t5 = []
 for gk in GROUP_ORDER:
     sub = df[df[&quot;ctdna_dynamics&quot;] == gk]
@@ -4428,13 +4390,10 @@ print(&quot;=&quot; * 90)
 print(supp5.to_string(index=False))
 
 
-# ── Figure 4 (hazard ratios) ─────────────────────────────────────────────────────
 lm = landmark_prep(df)
 print(f&quot;\nLandmark-analysable cohort: n = {len(lm)}&quot;)
 
-# Panel A: multivariable stage-adjusted HRs vs sustained-negative
 A = cox_multivariate(lm)
-# Panels B-E: Long vs Short within each pattern (reference = Short)
 BE_PANEL = {&quot;sustained_negative&quot;: &quot;B&quot;, &quot;clearance&quot;: &quot;C&quot;, &quot;rising&quot;: &quot;D&quot;, &quot;decrease_detectable&quot;: &quot;E&quot;}
 BE = {}
 for gk in BE_PANEL:
@@ -4449,7 +4408,6 @@ for gk in BE_PANEL:
     BE[gk] = dict(hr=hr, lo=lo, hi=hi, p=p, nL=len(L), nS=len(S),
                   eL=int(L[&quot;_evt&quot;].sum()), eS=int(S[&quot;_evt&quot;].sum()), L=L, S=S)
 
-# Panel F: Long-only decrease-but-detectable, TP#3 ctDNA &gt;=median vs &lt;median
 ddl = lm[(lm[&quot;ctdna_dynamics&quot;] == &quot;decrease_detectable&quot;) &amp; (lm[&quot;cohort_def&quot;] == &quot;long&quot;)]
 med = ddl[&quot;MTM_tp2&quot;].median()
 lo_m = ddl[ddl[&quot;MTM_tp2&quot;] &lt; med]; hi_m = ddl[ddl[&quot;MTM_tp2&quot;] &gt;= med]
@@ -4457,7 +4415,6 @@ fhr, flo, fhi, fp = cox_binary(lo_m[&quot;_lm_months&quot;].values, lo_m[&quot;_
                                hi_m[&quot;_lm_months&quot;].values, hi_m[&quot;_evt&quot;].values,
                                lo_m[&quot;stage_num&quot;].values, hi_m[&quot;stage_num&quot;].values)
 
-# ── results table ────────────────────────────────────────────────────────────--
 rows = []
 for gk in [&quot;clearance&quot;, &quot;decrease_detectable&quot;, &quot;rising&quot;]:
     if gk in A:
@@ -4482,7 +4439,6 @@ with pd.option_context(&quot;display.width&quot;, 160):
     print(res.to_string(index=False))
 
 
-# ── Figure 4 (panels A-F) ────────────────────────────────────────────────────────
 def fmt_hr(hr, lo, hi, p):
     return &quot;n/a&quot; if (hr is None or np.isnan(hr)) else f&quot;HR={hr:.2f} ({lo:.2f}\u2013{hi:.2f}) p={fmt_p(p) or &#x27;&lt;0.001&#x27;}&quot;
 
@@ -4494,7 +4450,6 @@ xlim = (-0.5, max_tick + 0.5)
 XLAB = &quot;Months since assessment timepoint&quot;
 
 fig = plt.figure(figsize=(20, 15))
-# 4 rows (km / risk / km / risk) x 3 cols; a tall blank spacer separates the two panel rows
 gs = fig.add_gridspec(5, 3, height_ratios=[4.0, 1.35, 0.9, 4.0, 1.35],
                       hspace=0.18, wspace=0.18)
 fig.suptitle(&quot;Figure 4. Serial ctDNA dynamics and adjuvant chemotherapy duration (DFS)&quot;,
@@ -4512,7 +4467,6 @@ def finish_km(ax, title, ann_text, ylabel=&quot;Disease-free survival&quot;):
         ax.legend(fontsize=8, loc=&quot;upper right&quot;)
 
 
-# Panel A — DFS by ctDNA dynamics (4 groups)
 axA = fig.add_subplot(gs[0, 0]); rA = fig.add_subplot(gs[1, 0], sharex=axA)
 strataA = []
 for gk in [&quot;sustained_negative&quot;, &quot;clearance&quot;, &quot;decrease_detectable&quot;, &quot;rising&quot;]:
@@ -4529,7 +4483,6 @@ finish_km(axA, &quot;A. DFS by ctDNA dynamics\nMultivariable stage-adjusted Cox 
           &quot;\n&quot;.join(txtA))
 draw_risk_table(rA, strataA, xticks, xlim, xlabel=XLAB, fontsize=7.2)
 
-# Panels B-E — Long vs Short within each dynamic group
 pos = {&quot;sustained_negative&quot;: (0, 1), &quot;clearance&quot;: (0, 2), &quot;rising&quot;: (3, 0), &quot;decrease_detectable&quot;: (3, 1)}
 for gk, (r, c) in pos.items():
     ax = fig.add_subplot(gs[r, c]); rx = fig.add_subplot(gs[r + 1, c], sharex=ax)
@@ -4546,7 +4499,6 @@ for gk, (r, c) in pos.items():
     ax.title.set_color(col)
     draw_risk_table(rx, strata, xticks, xlim, xlabel=XLAB, fontsize=7.2)
 
-# Panel F — decrease-but-detectable (Long only), TP#3 ctDNA median split
 axF = fig.add_subplot(gs[3, 2]); rF = fig.add_subplot(gs[4, 2], sharex=axF)
 strataF = []
 if len(lo_m) and len(hi_m):
